@@ -1,9 +1,10 @@
 import EmailUpload from '@/components/EmailUpload';
+import ProtectedLayout from '@/components/ProtectedLayout';
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <ProtectedLayout>
       <EmailUpload />
-    </main>
+    </ProtectedLayout>
   );
 }
