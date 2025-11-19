@@ -34,7 +34,7 @@ A full-stack web application that parses email files (.eml, .txt) and extracts s
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/email-parser.git
+git clone https://github.com/tscrosb/email-parser.git
 cd email-parser
 ```
 
