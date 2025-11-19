@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server';
 import { simpleParser, AddressObject } from 'mailparser';
+import { parseEmailChain } from '@/lib/emailParser';
 
-//helper function to format email addresses
 function formatAddresses(addressObj: AddressObject | AddressObject[] | undefined): string {
   if (!addressObj) return 'Unknown';
-  
   const addr = Array.isArray(addressObj) ? addressObj[0] : addressObj;
-  
   if (!addr) return 'Unknown';
   
   return addr.value.map(item => {
@@ -30,17 +28,25 @@ export async function POST(request: Request) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    
     const parsed = await simpleParser(buffer);
+
+    const emailChain = parseEmailChain(
+      parsed.text || parsed.html || 'No content',
+      parsed.subject || 'No Subject'
+    );
 
     const emailData = {
       sender: formatAddresses(parsed.from),
       recipients: formatAddresses(parsed.to),
       subject: parsed.subject || 'No Subject',
       date: parsed.date?.toISOString() || new Date().toISOString(),
-      body: parsed.text || parsed.html || 'No content',
+      
+      fullBody: parsed.text || parsed.html || 'No content',
+      
+      messageCount: emailChain.messages.length,
+      messages: emailChain.messages,
+      
       cc: formatAddresses(parsed.cc),
-      bcc: formatAddresses(parsed.bcc),
       messageId: parsed.messageId || '',
     };
 

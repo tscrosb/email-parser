@@ -3,17 +3,32 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase';
 
+interface ParsedMessage {
+  sender: string;
+  date: string;
+  body: string;
+  order: number;
+}
+
+interface EmailResult {
+  sender: string;
+  recipients: string;
+  subject: string;
+  date: string;
+  messageCount: number;
+  messages: ParsedMessage[];
+}
+
 export default function EmailUpload() {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<EmailResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
   const supabase = createClient();
 
   useEffect(() => {
-    // Get current user
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUserId(user?.id || null);
     });
@@ -60,13 +75,13 @@ export default function EmailUpload() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-8">
+    <div className="max-w-6xl mx-auto p-8">
       <div className="bg-white rounded-lg shadow-lg p-8">
         <h1 className="text-3xl font-bold mb-2 text-gray-800">
-          Email Parser
+          Email Chain Parser
         </h1>
         <p className="text-gray-600 mb-8">
-          Upload an email file (.eml or .txt) to extract structured data
+          Upload an email file to extract and split email chains into individual messages
         </p>
 
         {/* File Upload Area */}
@@ -101,7 +116,7 @@ export default function EmailUpload() {
             font-semibold hover:bg-blue-700 disabled:bg-gray-400
             disabled:cursor-not-allowed transition-colors"
         >
-          {loading ? 'Parsing...' : 'Parse Email'}
+          {loading ? 'Parsing Email Chain...' : 'Parse Email'}
         </button>
 
         {/* Error Message */}
@@ -114,57 +129,91 @@ export default function EmailUpload() {
 
         {/* Results */}
         {result && (
-          <div className="mt-6">
-            <h2 className="text-xl font-semibold mb-4 text-gray-800">
-              Parsed Email Data
-            </h2>
-            <div className="bg-gray-50 rounded-lg p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">
-                  Sender
-                </label>
-                <p className="text-gray-900">{result.sender || 'N/A'}</p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">
-                  Recipients
-                </label>
-                <p className="text-gray-900">{result.recipients || 'N/A'}</p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">
-                  Subject
-                </label>
-                <p className="text-gray-900">{result.subject || 'N/A'}</p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">
-                  Date
-                </label>
-                <p className="text-gray-900">
-                  {result.date ? new Date(result.date).toLocaleString() : 'N/A'}
-                </p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">
-                  Message Body
-                </label>
-                <div className="bg-white p-4 rounded border border-gray-200 max-h-64 overflow-y-auto">
-                  <pre className="whitespace-pre-wrap text-sm text-gray-900">
-                    {result.body || 'N/A'}
-                  </pre>
+          <div className="mt-8">
+            {/* Email Header Info */}
+            <div className="bg-blue-50 rounded-lg p-6 mb-6">
+              <h2 className="text-xl font-semibold mb-4 text-gray-800">
+                Email Overview
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">
+                    Subject
+                  </label>
+                  <p className="text-gray-900 font-medium">{result.subject}</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">
+                    Messages in Chain
+                  </label>
+                  <p className="text-gray-900 font-medium">
+                    {result.messageCount} message{result.messageCount !== 1 ? 's' : ''}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">
+                    Original Sender
+                  </label>
+                  <p className="text-gray-900">{result.sender}</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">
+                    Recipients
+                  </label>
+                  <p className="text-gray-900">{result.recipients}</p>
                 </div>
               </div>
             </div>
 
-            {/* Raw JSON (for debugging) */}
-            <details className="mt-4">
-              <summary className="cursor-pointer text-sm text-gray-600 hover:text-gray-800">
-                View Raw JSON
+            {/* Individual Messages in Chain */}
+            <h2 className="text-xl font-semibold mb-4 text-gray-800">
+              Messages in Thread
+            </h2>
+            <div className="space-y-4">
+              {result.messages.map((message, index) => (
+                <div
+                  key={index}
+                  className="bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-blue-300 transition-colors"
+                >
+                  {/* Message Header */}
+                  <div className="flex items-start justify-between mb-4 pb-4 border-b border-gray-200">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">
+                          Message {index + 1}
+                        </span>
+                        {index === 0 && (
+                          <span className="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded">
+                            Latest
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {message.sender}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(message.date).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Message Body */}
+                  <div className="bg-gray-50 rounded p-4">
+                    <pre className="whitespace-pre-wrap text-sm text-gray-900 font-sans">
+                      {message.body}
+                    </pre>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Raw JSON */}
+            <details className="mt-6">
+              <summary className="cursor-pointer text-sm text-gray-600 hover:text-gray-800 font-medium">
+                View Raw JSON Data
               </summary>
               <pre className="mt-2 p-4 bg-gray-900 text-green-400 rounded-lg overflow-x-auto text-xs">
                 {JSON.stringify(result, null, 2)}
